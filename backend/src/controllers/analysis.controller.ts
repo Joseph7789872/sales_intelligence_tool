@@ -94,3 +94,38 @@ export async function getAnalysis(
     next(err);
   }
 }
+
+/**
+ * PATCH /api/v1/analyses/:id/playbooks/:playbookId/feedback
+ * Updates the userFeedback field on a playbook.
+ */
+export async function updatePlaybookFeedback(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const { id: analysisId, playbookId } = req.params as {
+      id: string;
+      playbookId: string;
+    };
+    const { feedback } = req.body as { feedback: 'thumbs_up' | 'thumbs_down' };
+
+    const analysis = await analysisService.getAnalysis(analysisId);
+    if (!analysis || analysis.userId !== req.user!.id) {
+      throw new NotFoundError('Analysis');
+    }
+
+    const updated = await analysisService.updatePlaybookFeedback(
+      playbookId,
+      analysisId,
+      feedback,
+    );
+
+    if (!updated) throw new NotFoundError('Playbook');
+
+    res.json({ data: updated });
+  } catch (err) {
+    next(err);
+  }
+}

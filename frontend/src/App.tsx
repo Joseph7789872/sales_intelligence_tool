@@ -6,6 +6,8 @@ import { setAuthTokenGetter } from '@/lib/api';
 import { ProtectedRoute, OnboardingGate } from '@/features/auth/ProtectedRoute';
 import { OnboardingPage } from '@/features/onboarding/OnboardingPage';
 import { DealsPage } from '@/features/deals/DealsPage';
+import { DashboardPage } from '@/features/dashboard/DashboardPage';
+import { AnalysisDetailPage } from '@/features/dashboard/AnalysisDetailPage';
 
 const CLERK_PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
@@ -53,7 +55,17 @@ export function App() {
               element={
                 <ProtectedRoute>
                   <OnboardingGate>
-                    <DashboardPlaceholder />
+                    <DashboardPage />
+                  </OnboardingGate>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/:analysisId"
+              element={
+                <ProtectedRoute>
+                  <OnboardingGate>
+                    <AnalysisDetailPage />
                   </OnboardingGate>
                 </ProtectedRoute>
               }
@@ -84,21 +96,6 @@ function LandingPlaceholder() {
         </h1>
         <p className="mt-3 text-text-secondary">
           Turn closed-won deals into repeatable sales playbooks.
-        </p>
-      </div>
-    </div>
-  );
-}
-
-function DashboardPlaceholder() {
-  return (
-    <div className="flex min-h-screen items-center justify-center">
-      <div className="text-center">
-        <h1 className="text-3xl font-bold tracking-tight">
-          Dashboard
-        </h1>
-        <p className="mt-3 text-text-secondary">
-          Your playbooks will appear here.
         </p>
       </div>
     </div>

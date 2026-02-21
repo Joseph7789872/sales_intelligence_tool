@@ -1,4 +1,4 @@
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, and } from 'drizzle-orm';
 import { db } from '../config/db.js';
 import { analyses, patterns, prospects, playbooks } from '../db/schema.js';
 
@@ -112,4 +112,22 @@ export async function listUserAnalyses(userId: string) {
     .orderBy(desc(analyses.createdAt));
 
   return results;
+}
+
+// ── Playbook Feedback ───────────────────────────
+
+export async function updatePlaybookFeedback(
+  playbookId: string,
+  analysisId: string,
+  feedback: 'thumbs_up' | 'thumbs_down',
+) {
+  const [updated] = await db
+    .update(playbooks)
+    .set({ userFeedback: feedback, updatedAt: new Date() })
+    .where(
+      and(eq(playbooks.id, playbookId), eq(playbooks.analysisId, analysisId)),
+    )
+    .returning();
+
+  return updated ?? null;
 }
