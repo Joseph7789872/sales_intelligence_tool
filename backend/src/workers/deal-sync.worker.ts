@@ -10,6 +10,7 @@ import {
   upsertStageHistory,
   getDealsByExternalIds,
 } from '../services/deal.service.js';
+import { publishSSEEvent } from '../services/sse-publisher.js';
 
 // ── Types ──────────────────────────────────────
 
@@ -24,6 +25,19 @@ export interface DealSyncJobResult {
   stageHistoryCount: number;
 }
 
+// ── Helpers ────────────────────────────────────
+
+async function updateProgress(
+  job: Job<DealSyncJobData, DealSyncJobResult>,
+  progress: number,
+): Promise<void> {
+  await job.updateProgress(progress);
+  await publishSSEEvent(job.data.userId, {
+    type: 'job:progress',
+    payload: { jobId: job.id!, queueName: 'deal-sync', progress },
+  });
+}
+
 // ── Worker Process Function ────────────────────
 
 async function processDealSync(
@@ -31,7 +45,7 @@ async function processDealSync(
 ): Promise<DealSyncJobResult> {
   const { userId, crmConnectionId } = job.data;
 
-  await job.updateProgress(0);
+  await updateProgress(job, 0);
 
   // 1. Get valid access token (auto-refreshes if expired)
   const { accessToken, instanceUrl } = await getValidAccessToken(crmConnectionId);
@@ -45,7 +59,7 @@ async function processDealSync(
 
   const lastSyncAt = connection?.lastSyncAt ?? null;
 
-  await job.updateProgress(10);
+  await updateProgress(job, 10);
 
   // 3. Fetch closed-won deals from Salesforce
   const mappedDeals = await fetchClosedWonDeals(
@@ -57,15 +71,19 @@ async function processDealSync(
         ? 10 + Math.round((fetched / total) * 40)
         : 50;
       job.updateProgress(progress);
+      publishSSEEvent(userId, {
+        type: 'job:progress',
+        payload: { jobId: job.id!, queueName: 'deal-sync', progress },
+      });
     },
   );
 
-  await job.updateProgress(50);
+  await updateProgress(job, 50);
 
   // 4. Upsert deals into database
   const { upserted } = await upsertDeals(userId, crmConnectionId, mappedDeals);
 
-  await job.updateProgress(70);
+  await updateProgress(job, 70);
 
   // 5. Fetch and store stage history
   let stageHistoryCount = 0;
@@ -74,7 +92,7 @@ async function processDealSync(
   if (externalIds.length > 0) {
     const stageHistory = await fetchStageHistory(accessToken, instanceUrl, externalIds);
 
-    await job.updateProgress(80);
+    await updateProgress(job, 80);
 
     if (stageHistory.length > 0) {
       const dealIdMap = await getDealsByExternalIds(userId, externalIds);
@@ -82,7 +100,7 @@ async function processDealSync(
     }
   }
 
-  await job.updateProgress(90);
+  await updateProgress(job, 90);
 
   // 6. Update lastSyncAt on the connection
   await db
@@ -90,7 +108,7 @@ async function processDealSync(
     .set({ lastSyncAt: new Date(), updatedAt: new Date() })
     .where(eq(crmConnections.id, crmConnectionId));
 
-  await job.updateProgress(100);
+  await updateProgress(job, 100);
 
   return { dealCount: mappedDeals.length, upserted, stageHistoryCount };
 }
@@ -116,10 +134,24 @@ dealSyncWorker.on('completed', (job, result) => {
   console.log(
     `[deal-sync] Completed for user ${job.data.userId}: ${result.dealCount} deals synced`,
   );
+  publishSSEEvent(job.data.userId, {
+    type: 'job:completed',
+    payload: {
+      jobId: job.id!,
+      queueName: 'deal-sync',
+      result: result as unknown as Record<string, unknown>,
+    },
+  });
 });
 
 dealSyncWorker.on('failed', (job, err) => {
   console.error(
     `[deal-sync] Failed for user ${job?.data.userId}: ${err.message}`,
   );
+  if (job) {
+    publishSSEEvent(job.data.userId, {
+      type: 'job:failed',
+      payload: { jobId: job.id!, queueName: 'deal-sync', error: err.message },
+    });
+  }
 });

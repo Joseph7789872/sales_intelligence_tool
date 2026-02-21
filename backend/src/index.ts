@@ -8,8 +8,17 @@ import { errorHandler } from './middleware/errorHandler.js';
 import { clerkAuth } from './middleware/auth.js';
 import routes from './routes/index.js';
 import { startWorkers, stopWorkers } from './workers/index.js';
+import { sseStream } from './controllers/sse.controller.js';
+import { closeAllConnections } from './services/sse-connection-manager.js';
 
 const app = express();
+
+// CRITICAL: Raw body parsing for webhook MUST come before JSON middleware.
+// Svix needs the raw body (Buffer) to verify webhook signatures.
+app.use('/api/v1/auth/webhook', express.raw({ type: 'application/json' }));
+
+// SSE stream — mounted before helmet/cors/rate-limit/Clerk (no body, token-based auth)
+app.get('/api/v1/sse/stream', sseStream);
 
 // Security
 app.use(helmet());
@@ -25,10 +34,6 @@ app.use(rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 }));
-
-// CRITICAL: Raw body parsing for webhook MUST come before JSON middleware.
-// Svix needs the raw body (Buffer) to verify webhook signatures.
-app.use('/api/v1/auth/webhook', express.raw({ type: 'application/json' }));
 
 // Body parsing for all other routes
 app.use(express.json({ limit: '10mb' }));
@@ -53,6 +58,7 @@ app.listen(env.PORT, () => {
 });
 
 process.on('SIGTERM', async () => {
+  closeAllConnections();
   await stopWorkers();
   process.exit(0);
 });
