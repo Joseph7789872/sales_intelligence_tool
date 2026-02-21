@@ -19,7 +19,13 @@ export async function salesforceAuthorize(
   try {
     const stateToken = crypto.randomBytes(32).toString('hex');
     const stateKey = `${STATE_PREFIX}${stateToken}`;
-    await redis.set(stateKey, req.user!.id, 'EX', STATE_TTL_SECONDS);
+    const context = (req.query.context as string) || 'settings';
+    await redis.set(
+      stateKey,
+      JSON.stringify({ userId: req.user!.id, context }),
+      'EX',
+      STATE_TTL_SECONDS,
+    );
 
     const authorizeUrl = crmService.buildSalesforceAuthorizeUrl(stateToken);
     res.redirect(authorizeUrl);
@@ -58,9 +64,9 @@ export async function salesforceCallback(
 
     // Validate CSRF state token
     const stateKey = `${STATE_PREFIX}${state as string}`;
-    const storedUserId = await redis.get(stateKey);
+    const storedValue = await redis.get(stateKey);
 
-    if (!storedUserId) {
+    if (!storedValue) {
       res.redirect(
         `${env.FRONTEND_URL}/settings/integrations?error=Invalid+or+expired+state+parameter`,
       );
@@ -69,6 +75,17 @@ export async function salesforceCallback(
 
     // Delete state immediately (single-use)
     await redis.del(stateKey);
+
+    // Parse stored state (supports both legacy string and new JSON format)
+    let storedUserId: string;
+    let context = 'settings';
+    try {
+      const parsed = JSON.parse(storedValue) as { userId: string; context: string };
+      storedUserId = parsed.userId;
+      context = parsed.context;
+    } catch {
+      storedUserId = storedValue;
+    }
 
     // Verify the state belongs to the authenticated user
     if (storedUserId !== req.user!.id) {
@@ -82,8 +99,11 @@ export async function salesforceCallback(
     // Store encrypted tokens in DB
     await crmService.upsertConnection(req.user!.id, 'salesforce', tokens);
 
-    // Redirect to frontend with success
-    res.redirect(`${env.FRONTEND_URL}/settings/integrations?connected=salesforce`);
+    // Redirect to frontend based on context
+    const redirectPath = context === 'onboarding'
+      ? '/onboarding?connected=salesforce'
+      : '/settings/integrations?connected=salesforce';
+    res.redirect(`${env.FRONTEND_URL}${redirectPath}`);
   } catch (error) {
     console.error('Salesforce callback error:', error);
     res.redirect(

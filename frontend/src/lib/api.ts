@@ -4,6 +4,12 @@ interface RequestOptions extends Omit<RequestInit, 'body'> {
   body?: unknown;
 }
 
+let getAuthToken: (() => Promise<string | null>) | null = null;
+
+export function setAuthTokenGetter(fn: () => Promise<string | null>) {
+  getAuthToken = fn;
+}
+
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { body, headers: customHeaders, ...rest } = options;
 
@@ -11,6 +17,13 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     'Content-Type': 'application/json',
     ...customHeaders as Record<string, string>,
   };
+
+  if (getAuthToken) {
+    const token = await getAuthToken();
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+  }
 
   const res = await fetch(`${API_BASE}${path}`, {
     ...rest,

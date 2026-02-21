@@ -1,6 +1,10 @@
-import { ClerkProvider } from '@clerk/clerk-react';
+import { useEffect } from 'react';
+import { ClerkProvider, useAuth } from '@clerk/clerk-react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { setAuthTokenGetter } from '@/lib/api';
+import { ProtectedRoute, OnboardingGate } from '@/features/auth/ProtectedRoute';
+import { OnboardingPage } from '@/features/onboarding/OnboardingPage';
 
 const CLERK_PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
@@ -17,13 +21,42 @@ const queryClient = new QueryClient({
   },
 });
 
+function AuthTokenSync() {
+  const { getToken } = useAuth();
+
+  useEffect(() => {
+    setAuthTokenGetter(() => getToken());
+  }, [getToken]);
+
+  return null;
+}
+
 export function App() {
   return (
     <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY}>
       <QueryClientProvider client={queryClient}>
+        <AuthTokenSync />
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<LandingPlaceholder />} />
+            <Route
+              path="/onboarding"
+              element={
+                <ProtectedRoute>
+                  <OnboardingPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <OnboardingGate>
+                    <DashboardPlaceholder />
+                  </OnboardingGate>
+                </ProtectedRoute>
+              }
+            />
           </Routes>
         </BrowserRouter>
       </QueryClientProvider>
@@ -40,6 +73,21 @@ function LandingPlaceholder() {
         </h1>
         <p className="mt-3 text-text-secondary">
           Turn closed-won deals into repeatable sales playbooks.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function DashboardPlaceholder() {
+  return (
+    <div className="flex min-h-screen items-center justify-center">
+      <div className="text-center">
+        <h1 className="text-3xl font-bold tracking-tight">
+          Dashboard
+        </h1>
+        <p className="mt-3 text-text-secondary">
+          Your playbooks will appear here.
         </p>
       </div>
     </div>

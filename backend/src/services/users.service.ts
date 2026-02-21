@@ -65,3 +65,19 @@ export async function updateProfile(
   }
   return user;
 }
+
+export async function updateOnboardingStep(
+  userId: string,
+  step: number,
+): Promise<User> {
+  const [user] = await db
+    .update(users)
+    .set({ onboardingStep: step, updatedAt: new Date() })
+    .where(eq(users.id, userId))
+    .returning();
+
+  if (!user) {
+    throw new NotFoundError('User');
+  }
+  return user;
+}

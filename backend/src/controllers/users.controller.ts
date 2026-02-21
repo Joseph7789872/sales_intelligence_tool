@@ -38,3 +38,23 @@ export async function updateCurrentUser(
     next(error);
   }
 }
+
+export async function updateOnboardingStep(
+  req: Request,
+  res: Response<ApiResponse<User>>,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const updatedUser = await usersService.updateOnboardingStep(
+      req.user!.id,
+      req.body.step,
+    );
+
+    res.json({
+      data: updatedUser,
+      message: 'Onboarding step updated',
+    });
+  } catch (error) {
+    next(error);
+  }
+}
