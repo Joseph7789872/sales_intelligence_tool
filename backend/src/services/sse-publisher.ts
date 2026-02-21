@@ -10,16 +10,31 @@ function getPublisher(): IORedis {
     publisher = new IORedis(env.REDIS_URL, {
       maxRetriesPerRequest: null,
       lazyConnect: true,
+      retryStrategy(times) {
+        if (times === 1) {
+          console.warn('[redis:sse-publisher] Connection failed — retrying in background...');
+        }
+        return Math.min(times * 500, 30_000);
+      },
     });
-    publisher.connect();
+    publisher.on('error', () => {
+      // Suppress — retryStrategy handles reconnection
+    });
+    publisher.connect().catch(() => {
+      // Suppress initial connection failure — will retry
+    });
   }
   return publisher;
 }
 
 export async function publishSSEEvent(userId: string, event: SSEEvent): Promise<void> {
-  const channel = sseChannelForUser(userId);
-  const message = JSON.stringify(event);
-  await getPublisher().publish(channel, message);
+  try {
+    const channel = sseChannelForUser(userId);
+    const message = JSON.stringify(event);
+    await getPublisher().publish(channel, message);
+  } catch {
+    // Suppress publish errors when Redis is unavailable
+  }
 }
 
 export async function closePublisher(): Promise<void> {

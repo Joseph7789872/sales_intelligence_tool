@@ -155,3 +155,7 @@ dealSyncWorker.on('failed', (job, err) => {
     });
   }
 });
+
+dealSyncWorker.on('error', () => {
+  // Suppress — Redis reconnects automatically
+});

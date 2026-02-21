@@ -197,3 +197,7 @@ analysisOrchestratorWorker.on('failed', (job, err) => {
     `[analysis-orchestrator] Failed for user ${job?.data.userId}: ${err.message}`,
   );
 });
+
+analysisOrchestratorWorker.on('error', () => {
+  // Suppress — Redis reconnects automatically
+});

@@ -1,6 +1,6 @@
-import { clerkMiddleware, getAuth } from '@clerk/express';
+import { clerkMiddleware, getAuth, clerkClient } from '@clerk/express';
 import type { Request, Response, NextFunction } from 'express';
-import { findByClerkId } from '../services/users.service.js';
+import { findByClerkId, createFromClerk } from '../services/users.service.js';
 import { UnauthorizedError } from '../utils/errors.js';
 
 /**
@@ -12,6 +12,7 @@ export const clerkAuth = clerkMiddleware();
 /**
  * Require authentication and attach the full user record to req.user.
  * Use on protected routes after clerkAuth has run globally.
+ * Auto-creates the DB user on first request if the webhook hasn't fired yet.
  */
 export async function requireAuth(
   req: Request,
@@ -25,10 +26,21 @@ export async function requireAuth(
       throw new UnauthorizedError('Authentication required');
     }
 
-    const user = await findByClerkId(auth.userId);
+    let user = await findByClerkId(auth.userId);
 
     if (!user) {
-      throw new UnauthorizedError('User not found in database');
+      // Auto-create user from Clerk (covers local dev without webhook)
+      try {
+        const clerkUser = await clerkClient.users.getUser(auth.userId);
+        const email = clerkUser.emailAddresses[0]?.emailAddress ?? '';
+        const fullName =
+          [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(' ') || undefined;
+
+        user = await createFromClerk({ clerkId: auth.userId, email, fullName });
+        console.log(`[auth] Auto-created user: ${auth.userId} (${email})`);
+      } catch {
+        throw new UnauthorizedError('User not found in database');
+      }
     }
 
     req.user = user;

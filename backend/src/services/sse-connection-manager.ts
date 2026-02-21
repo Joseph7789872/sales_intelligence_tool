@@ -70,7 +70,9 @@ export function addConnection(userId: string, res: Response): void {
   // Subscribe to user's channel if not already subscribed
   const channel = sseChannelForUser(userId);
   if (!subscribedChannels.has(channel)) {
-    redisSubscriber.subscribe(channel);
+    redisSubscriber.subscribe(channel).catch(() => {
+      // Redis unavailable — SSE will work when Redis reconnects
+    });
     subscribedChannels.add(channel);
   }
 
