@@ -5,6 +5,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { setAuthTokenGetter } from '@/lib/api';
 import { ProtectedRoute, OnboardingGate } from '@/features/auth/ProtectedRoute';
 import { OnboardingPage } from '@/features/onboarding/OnboardingPage';
+import { DealsPage } from '@/features/deals/DealsPage';
 
 const CLERK_PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
@@ -53,6 +54,16 @@ export function App() {
                 <ProtectedRoute>
                   <OnboardingGate>
                     <DashboardPlaceholder />
+                  </OnboardingGate>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/deals"
+              element={
+                <ProtectedRoute>
+                  <OnboardingGate>
+                    <DealsPage />
                   </OnboardingGate>
                 </ProtectedRoute>
               }

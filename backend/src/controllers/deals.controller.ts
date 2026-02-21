@@ -104,3 +104,24 @@ export async function listDeals(
     next(error);
   }
 }
+
+/**
+ * GET /api/v1/deals/:dealId
+ * Returns a single deal with its stage history timeline.
+ */
+export async function getDealDetail(
+  req: Request<{ dealId: string }>,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const result = await dealService.getDealWithHistory(
+      req.user!.id,
+      req.params.dealId,
+    );
+
+    res.json({ data: result });
+  } catch (error) {
+    next(error);
+  }
+}

@@ -1,11 +1,12 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { requireAuth } from '../middleware/auth.js';
-import { validate, validateQuery } from '../middleware/validate.js';
+import { validate, validateQuery, validateParams } from '../middleware/validate.js';
 import {
   triggerSync,
   getSyncStatus,
   listDeals,
+  getDealDetail,
 } from '../controllers/deals.controller.js';
 
 const router = Router();
@@ -26,10 +27,15 @@ const listDealsQuerySchema = z.object({
   sortOrder: z.enum(['asc', 'desc']).default('desc'),
 });
 
+const dealIdParamSchema = z.object({
+  dealId: z.string().uuid(),
+});
+
 // ── Routes ─────────────────────────────────────
 
 router.post('/sync', validate(triggerSyncSchema), triggerSync);
 router.get('/sync/:jobId', getSyncStatus);
 router.get('/', validateQuery(listDealsQuerySchema), listDeals);
+router.get('/:dealId', validateParams(dealIdParamSchema), getDealDetail);
 
 export default router;

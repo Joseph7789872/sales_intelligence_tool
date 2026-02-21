@@ -48,6 +48,21 @@ export interface Deal {
   employeeCount: number | null;
 }
 
+export interface StageHistoryEntry {
+  id: string;
+  dealId: string;
+  stageName: string;
+  enteredAt: string;
+  exitedAt: string | null;
+  durationDays: number | null;
+  createdAt: string;
+}
+
+export interface DealWithHistory {
+  deal: Deal;
+  stageHistory: StageHistoryEntry[];
+}
+
 export interface PaginatedDeals {
   deals: Deal[];
   total: number;

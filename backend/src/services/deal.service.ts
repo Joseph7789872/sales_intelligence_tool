@@ -1,6 +1,7 @@
 import { eq, and, sql, count, inArray, asc, desc } from 'drizzle-orm';
 import { db } from '../config/db.js';
 import { deals, dealStageHistory } from '../db/schema.js';
+import { NotFoundError } from '../utils/errors.js';
 import type { MappedDeal, MappedStageHistory } from './salesforce.service.js';
 
 // ── Types ──────────────────────────────────────
@@ -237,4 +238,25 @@ export async function listUserDeals(
     page,
     limit,
   };
+}
+
+// ── Single Deal with Stage History ───────────
+
+export async function getDealWithHistory(userId: string, dealId: string) {
+  const result = await db.query.deals.findFirst({
+    where: and(eq(deals.id, dealId), eq(deals.userId, userId)),
+    with: {
+      stageHistory: {
+        orderBy: (stageHistory, { asc: a }) => [a(stageHistory.enteredAt)],
+      },
+    },
+  });
+
+  if (!result) {
+    throw new NotFoundError('Deal');
+  }
+
+  const { stageHistory, ...deal } = result;
+
+  return { deal, stageHistory };
 }
