@@ -7,6 +7,7 @@ import { env } from './config/env.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { clerkAuth } from './middleware/auth.js';
 import routes from './routes/index.js';
+import { startWorkers, stopWorkers } from './workers/index.js';
 
 const app = express();
 
@@ -48,6 +49,12 @@ app.use(errorHandler);
 
 app.listen(env.PORT, () => {
   console.log(`Backend running on http://localhost:${env.PORT}`);
+  startWorkers();
+});
+
+process.on('SIGTERM', async () => {
+  await stopWorkers();
+  process.exit(0);
 });
 
 export default app;
