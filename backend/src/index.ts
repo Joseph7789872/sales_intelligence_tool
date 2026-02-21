@@ -5,6 +5,8 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import { env } from './config/env.js';
 import { errorHandler } from './middleware/errorHandler.js';
+import { clerkAuth } from './middleware/auth.js';
+import routes from './routes/index.js';
 
 const app = express();
 
@@ -23,16 +25,23 @@ app.use(rateLimit({
   legacyHeaders: false,
 }));
 
-// Body parsing
+// CRITICAL: Raw body parsing for webhook MUST come before JSON middleware.
+// Svix needs the raw body (Buffer) to verify webhook signatures.
+app.use('/api/v1/auth/webhook', express.raw({ type: 'application/json' }));
+
+// Body parsing for all other routes
 app.use(express.json({ limit: '10mb' }));
 
-// Health check
+// Global Clerk auth middleware
+app.use(clerkAuth);
+
+// Health check (no auth required)
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// TODO: Mount API routes here
-// app.use('/api/v1', routes);
+// API routes
+app.use('/api/v1', routes);
 
 // Error handling (must be last)
 app.use(errorHandler);
