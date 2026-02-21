@@ -133,7 +133,7 @@ async function processAnalysis(
 
   let playbookCount: number;
   try {
-    playbookCount = await generatePlaybooks(analysisId, extractedPatterns);
+    playbookCount = await generatePlaybooks(analysisId, extractedPatterns, selectedDealIds);
     await publishStepComplete(userId, analysisId, 'playbooks');
     await job.updateProgress(95);
     await publishProgress(userId, analysisId, 'playbooks', 95, `Generated ${playbookCount} playbooks`);
