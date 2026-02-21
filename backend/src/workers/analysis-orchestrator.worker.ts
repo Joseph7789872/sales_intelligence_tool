@@ -113,7 +113,7 @@ async function processAnalysis(
 
   let prospectResults;
   try {
-    prospectResults = await findLookalikes(analysisId, extractedPatterns);
+    prospectResults = await findLookalikes(analysisId, userId, extractedPatterns);
     await publishStepComplete(userId, analysisId, 'lookalikes');
     await job.updateProgress(66);
     await publishProgress(userId, analysisId, 'lookalikes', 66, `Found ${prospectResults.length} lookalike prospects`);
