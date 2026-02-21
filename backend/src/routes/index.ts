@@ -5,6 +5,7 @@ import crmRoutes from './crm.routes.js';
 import dealsRoutes from './deals.routes.js';
 import sseRoutes from './sse.routes.js';
 import enrichmentRoutes from './enrichment.routes.js';
+import analysisRoutes from './analysis.routes.js';
 
 const router = Router();
 
@@ -14,5 +15,6 @@ router.use('/crm', crmRoutes);
 router.use('/deals', dealsRoutes);
 router.use('/sse', sseRoutes);
 router.use('/enrichment', enrichmentRoutes);
+router.use('/analyses', analysisRoutes);
 
 export default router;

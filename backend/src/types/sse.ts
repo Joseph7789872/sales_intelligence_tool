@@ -40,11 +40,53 @@ export interface NotificationEvent {
   };
 }
 
+// ── Analysis-Specific Events ─────────────────────
+
+export type AnalysisStep = 'patterns' | 'lookalikes' | 'playbooks' | 'complete' | 'error';
+
+export interface AnalysisProgressEvent {
+  type: 'analysis:progress';
+  payload: {
+    analysisId: string;
+    step: AnalysisStep;
+    progress: number;
+    message: string;
+  };
+}
+
+export interface AnalysisStepCompleteEvent {
+  type: 'analysis:step-complete';
+  payload: {
+    analysisId: string;
+    step: string;
+  };
+}
+
+export interface AnalysisCompleteEvent {
+  type: 'analysis:complete';
+  payload: {
+    analysisId: string;
+  };
+}
+
+export interface AnalysisErrorEvent {
+  type: 'analysis:error';
+  payload: {
+    analysisId: string;
+    step: string;
+    error: string;
+  };
+}
+
 export type SSEEvent =
   | JobProgressEvent
   | JobCompletedEvent
   | JobFailedEvent
-  | NotificationEvent;
+  | NotificationEvent
+  | AnalysisProgressEvent
+  | AnalysisStepCompleteEvent
+  | AnalysisCompleteEvent
+  | AnalysisErrorEvent;
 
 export function sseChannelForUser(userId: string): string {
   return `sse:user:${userId}`;
