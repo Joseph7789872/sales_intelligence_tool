@@ -38,6 +38,19 @@ export async function saveEnrichmentConfig(
   }
 }
 
+export async function mockEnrichmentConfig(
+  req: Request,
+  res: Response<ApiResponse<enrichmentService.EnrichmentConfigPublic>>,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const config = await enrichmentService.createMockConfig(req.user!.id);
+    res.json({ data: config });
+  } catch (error) {
+    next(error);
+  }
+}
+
 export async function listEnrichmentConfigs(
   req: Request,
   res: Response<ApiResponse<enrichmentService.EnrichmentConfigPublic[]>>,

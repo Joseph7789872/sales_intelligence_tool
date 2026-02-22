@@ -226,6 +226,37 @@ export async function getValidAccessToken(connectionId: string): Promise<{
   };
 }
 
+// ── Mock Connection ────────────────────────────
+
+export async function createMockConnection(userId: string): Promise<CrmConnectionPublic> {
+  const [existing] = await db
+    .select()
+    .from(crmConnections)
+    .where(
+      and(eq(crmConnections.userId, userId), eq(crmConnections.provider, 'salesforce')),
+    )
+    .limit(1);
+
+  if (existing) {
+    return sanitizeConnection(existing);
+  }
+
+  const [created] = await db
+    .insert(crmConnections)
+    .values({
+      userId,
+      provider: 'salesforce',
+      accessToken: 'mock_demo_access_token',
+      refreshToken: 'mock_demo_refresh_token',
+      instanceUrl: 'https://demo.salesforce.com',
+      tokenExpiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      status: 'active',
+    })
+    .returning();
+
+  return sanitizeConnection(created);
+}
+
 // ── Helpers ────────────────────────────────────
 
 function sanitizeConnection(

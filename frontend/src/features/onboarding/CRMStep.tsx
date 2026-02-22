@@ -1,6 +1,6 @@
-import { useEffect } from 'react';
+import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -24,11 +24,14 @@ export function CRMStep({ onComplete, onBack }: CRMStepProps) {
   const [searchParams] = useSearchParams();
   const justConnected = searchParams.get('connected') === 'salesforce';
 
+  const queryClient = useQueryClient();
+  const [mockLoading, setMockLoading] = useState(false);
+  const [mockError, setMockError] = useState<string | null>(null);
+
   const { data: connections, isLoading } = useQuery({
     queryKey: ['crm', 'connections'],
     queryFn: () => api.get<ApiResponse<CrmConnection[]>>('/crm/connections'),
     select: (res) => res.data,
-    refetchInterval: justConnected ? false : 5000, // Poll until connected
   });
 
   const salesforceConnection = connections?.find(
@@ -36,15 +39,21 @@ export function CRMStep({ onComplete, onBack }: CRMStepProps) {
   );
   const isConnected = !!salesforceConnection || justConnected;
 
-  // Stop polling once connected
-  useEffect(() => {
-    if (salesforceConnection) {
-      // Connection detected
-    }
-  }, [salesforceConnection]);
-
   const handleConnect = () => {
-    window.location.href = '/api/v1/crm/salesforce/authorize?context=onboarding';
+    window.location.href = `${import.meta.env.VITE_API_URL || 'http://localhost:3001/api/v1'}/crm/salesforce/authorize?context=onboarding`;
+  };
+
+  const handleMockConnect = async () => {
+    setMockLoading(true);
+    setMockError(null);
+    try {
+      await api.post('/crm/mock-connect');
+      await queryClient.invalidateQueries({ queryKey: ['crm', 'connections'] });
+    } catch (err) {
+      setMockError(err instanceof Error ? err.message : 'Failed to load demo data');
+    } finally {
+      setMockLoading(false);
+    }
   };
 
   return (
@@ -119,6 +128,26 @@ export function CRMStep({ onComplete, onBack }: CRMStepProps) {
             </div>
           ))}
         </div>
+
+        {!isConnected && (
+          <div className="mt-6 rounded-lg border border-dashed border-border p-4 text-center">
+            <p className="text-sm text-text-muted">
+              No Salesforce account? Try the platform with sample data.
+            </p>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="mt-2"
+              onClick={handleMockConnect}
+              isLoading={mockLoading}
+            >
+              Use Demo Data Instead
+            </Button>
+            {mockError && (
+              <p className="mt-2 text-sm text-red-500">{mockError}</p>
+            )}
+          </div>
+        )}
 
         <div className="mt-8 flex justify-between">
           <Button variant="ghost" onClick={onBack}>

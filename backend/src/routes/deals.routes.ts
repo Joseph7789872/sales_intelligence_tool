@@ -4,6 +4,7 @@ import { requireAuth } from '../middleware/auth.js';
 import { validate, validateQuery, validateParams } from '../middleware/validate.js';
 import {
   triggerSync,
+  mockDealSync,
   getSyncStatus,
   listDeals,
   getDealDetail,
@@ -34,6 +35,7 @@ const dealIdParamSchema = z.object({
 // ── Routes ─────────────────────────────────────
 
 router.post('/sync', validate(triggerSyncSchema), triggerSync);
+router.post('/mock-sync', validate(triggerSyncSchema), mockDealSync);
 router.get('/sync/:jobId', getSyncStatus);
 router.get('/', validateQuery(listDealsQuerySchema), listDeals);
 router.get('/:dealId', validateParams(dealIdParamSchema), getDealDetail);

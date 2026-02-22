@@ -85,6 +85,37 @@ export async function getConfigsByUser(userId: string): Promise<EnrichmentConfig
   return configs.map(sanitizeConfig);
 }
 
+// ── Mock ──────────────────────────────────────
+
+export async function createMockConfig(userId: string): Promise<EnrichmentConfigPublic> {
+  const [existing] = await db
+    .select()
+    .from(enrichmentConfigs)
+    .where(
+      and(
+        eq(enrichmentConfigs.userId, userId),
+        eq(enrichmentConfigs.provider, 'clay'),
+      ),
+    )
+    .limit(1);
+
+  if (existing) {
+    return sanitizeConfig(existing);
+  }
+
+  const [created] = await db
+    .insert(enrichmentConfigs)
+    .values({
+      userId,
+      provider: 'clay',
+      apiKey: 'mock_demo_clay_key',
+      isValid: true,
+      lastValidatedAt: new Date(),
+    })
+    .returning();
+  return sanitizeConfig(created);
+}
+
 // ── Helpers ────────────────────────────────────
 
 function sanitizeConfig(

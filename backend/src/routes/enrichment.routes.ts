@@ -4,6 +4,7 @@ import { requireAuth } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import {
   saveEnrichmentConfig,
+  mockEnrichmentConfig,
   listEnrichmentConfigs,
 } from '../controllers/enrichment.controller.js';
 
@@ -18,6 +19,9 @@ const saveConfigSchema = z.object({
 });
 
 router.post('/configs', validate(saveConfigSchema), saveEnrichmentConfig);
+
+// POST /api/v1/enrichment/mock-config
+router.post('/mock-config', mockEnrichmentConfig);
 
 // GET /api/v1/enrichment/configs
 router.get('/configs', listEnrichmentConfigs);

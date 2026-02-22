@@ -5,6 +5,7 @@ import {
   salesforceCallback,
   listConnections,
   disconnectConnection,
+  mockConnect,
 } from '../controllers/crm.controller.js';
 
 const router = Router();
@@ -15,6 +16,9 @@ router.use(requireAuth);
 // Salesforce OAuth
 router.get('/salesforce/authorize', salesforceAuthorize);
 router.get('/salesforce/callback', salesforceCallback);
+
+// Mock connection for demo/testing
+router.post('/mock-connect', mockConnect);
 
 // Generic CRM connection management
 router.get('/connections', listConnections);

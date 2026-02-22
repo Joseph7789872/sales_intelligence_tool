@@ -129,6 +129,23 @@ export async function listConnections(
 }
 
 /**
+ * POST /api/v1/crm/mock-connect
+ * Creates a fake CRM connection so the user can skip OAuth and use demo data.
+ */
+export async function mockConnect(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const connection = await crmService.createMockConnection(req.user!.id);
+    res.json({ data: connection });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
  * DELETE /api/v1/crm/connections/:id
  */
 export async function disconnectConnection(

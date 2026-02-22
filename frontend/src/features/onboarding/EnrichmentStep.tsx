@@ -23,6 +23,8 @@ const ENRICHMENT_PROVIDERS = [
 export function EnrichmentStep({ onComplete, onBack }: EnrichmentStepProps) {
   const [apiKey, setApiKey] = useState('');
   const [validationError, setValidationError] = useState('');
+  const [mockLoading, setMockLoading] = useState(false);
+  const [mockError, setMockError] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   const { data: configs } = useQuery({
@@ -146,6 +148,37 @@ export function EnrichmentStep({ onComplete, onBack }: EnrichmentStepProps) {
             </div>
           ))}
         </div>
+
+        {!isValidated && (
+          <div className="mt-6 rounded-lg border border-dashed border-border p-4 text-center">
+            <p className="text-sm text-text-muted">
+              No Clay API key? Try the platform with sample enrichment data.
+            </p>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="mt-2"
+              onClick={async () => {
+                setMockLoading(true);
+                setMockError(null);
+                try {
+                  await api.post('/enrichment/mock-config');
+                  await queryClient.invalidateQueries({ queryKey: ['enrichment', 'configs'] });
+                } catch (err) {
+                  setMockError(err instanceof Error ? err.message : 'Failed to load demo data');
+                } finally {
+                  setMockLoading(false);
+                }
+              }}
+              isLoading={mockLoading}
+            >
+              Use Demo Data Instead
+            </Button>
+            {mockError && (
+              <p className="mt-2 text-sm text-red-500">{mockError}</p>
+            )}
+          </div>
+        )}
 
         <div className="mt-8 flex justify-between">
           <Button variant="ghost" onClick={onBack}>

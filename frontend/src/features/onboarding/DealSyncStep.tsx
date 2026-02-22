@@ -31,12 +31,14 @@ export function DealSyncStep({ onComplete, onBack }: DealSyncStepProps) {
     (c) => c.provider === 'salesforce' && c.status === 'active',
   );
 
-  // Poll sync job status
+  const isDemoConnection = activeConnection?.instanceUrl === 'https://demo.salesforce.com';
+
+  // Poll sync job status (only for real sync)
   const { data: syncStatus } = useQuery({
     queryKey: ['deals', 'sync', jobId],
     queryFn: () => api.get<ApiResponse<SyncJob>>(`/deals/sync/${jobId}`),
     select: (res) => res.data,
-    enabled: syncState === 'syncing' && !!jobId,
+    enabled: syncState === 'syncing' && !!jobId && !isDemoConnection,
     refetchInterval: 2000,
   });
 
@@ -58,7 +60,18 @@ export function DealSyncStep({ onComplete, onBack }: DealSyncStepProps) {
 
   const deals = dealsData?.deals ?? [];
 
-  // Start sync mutation
+  // Mock sync mutation (demo mode)
+  const mockSync = useMutation({
+    mutationFn: () =>
+      api.post<ApiResponse<{ synced: number }>>('/deals/mock-sync', {
+        connectionId: activeConnection!.id,
+      }),
+    onSuccess: () => {
+      setSyncState('selecting');
+    },
+  });
+
+  // Real sync mutation
   const startSync = useMutation({
     mutationFn: () =>
       api.post<ApiResponse<{ jobId: string }>>('/deals/sync', {
@@ -69,6 +82,17 @@ export function DealSyncStep({ onComplete, onBack }: DealSyncStepProps) {
       setSyncState('syncing');
     },
   });
+
+  const handleStartSync = () => {
+    if (isDemoConnection) {
+      mockSync.mutate();
+    } else {
+      startSync.mutate();
+    }
+  };
+
+  const isSyncPending = startSync.isPending || mockSync.isPending;
+  const isSyncError = startSync.isError || mockSync.isError;
 
   const toggleDeal = (dealId: string) => {
     setSelectedDealIds((prev) => {
@@ -115,24 +139,26 @@ export function DealSyncStep({ onComplete, onBack }: DealSyncStepProps) {
         {syncState === 'ready' && (
           <>
             <h2 className="text-2xl font-bold text-text-primary">
-              Sync Your Deals
+              {isDemoConnection ? 'Load Demo Deals' : 'Sync Your Deals'}
             </h2>
             <p className="mt-2 text-text-secondary">
-              We&apos;ll pull your closed-won deals from Salesforce for analysis.
+              {isDemoConnection
+                ? 'We\'ll load 15 sample closed-won deals for analysis.'
+                : 'We\'ll pull your closed-won deals from Salesforce for analysis.'}
             </p>
             <div className="mt-8 flex justify-center">
               <Button
                 size="lg"
-                onClick={() => startSync.mutate()}
-                isLoading={startSync.isPending}
+                onClick={handleStartSync}
+                isLoading={isSyncPending}
                 disabled={!activeConnection}
               >
-                Start Sync
+                {isDemoConnection ? 'Load Demo Deals' : 'Start Sync'}
               </Button>
             </div>
-            {startSync.isError && (
+            {isSyncError && (
               <p className="mt-4 text-center text-sm text-error">
-                Failed to start sync. Please try again.
+                Failed to {isDemoConnection ? 'load demo deals' : 'start sync'}. Please try again.
               </p>
             )}
             <div className="mt-8 flex justify-start">

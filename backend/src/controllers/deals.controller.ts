@@ -74,6 +74,33 @@ export async function getSyncStatus(
 }
 
 /**
+ * POST /api/v1/deals/mock-sync
+ * Inserts sample deals for demo mode (no real CRM call).
+ */
+export async function mockDealSync(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const { connectionId } = req.body as { connectionId: string };
+
+    const connections = await listConnectionsByUser(req.user!.id);
+    const connection = connections.find((c) => c.id === connectionId);
+    if (!connection) throw new NotFoundError('CRM Connection');
+
+    const result = await dealService.mockSync(req.user!.id, connectionId);
+
+    res.json({
+      data: { synced: result.synced },
+      message: 'Demo deals loaded',
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
  * GET /api/v1/deals
  * Lists the authenticated user's synced deals with pagination.
  */
